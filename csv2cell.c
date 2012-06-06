@@ -1,16 +1,38 @@
 #include <stdio.h>
 
-#define BUF_SIZE 512
+#define CELL_SIZE 512
+#define CELL_COUNT 4
+#define SEPARATOR ';'
+#define CONTROL_COL 3
+#define ROW_STYLE "background-color:rgb(191,244,174);"
+#define CELL_STYLE "border: 1px solid silver;"
+  
   FILE *in = NULL,*out = NULL;
-
+  char **Cells;
   /*
    * Yeah, no buffer overflow checks, screw me
    */
+
+void initCells(){
+  int i;
+  Cells = (char **)malloc(CELL_COUNT*sizeof(char *));
+  for (i=0;i<CELL_COUNT;i++){
+    Cells[i] = (char *)malloc(CELL_SIZE);
+  }
+}
+
+void freeCells(){
+  int i;
+  for(i=0;i<CELL_COUNT;i++)
+     free(Cells[i]);
+  free(Cells);
+}
+  
 void loadText(char *Buf,char TheEnd){
 int i=0;
 do{
   Buf[i++] = fgetc(in);
-}while(Buf[i-1]!=TheEnd && Buf[i-1]!=EOF);
+}while(Buf[i-1]!=TheEnd && !feof(in));
 Buf[i-1]='\x0';
 #ifdef DEBUG
 printf("i=%d\n",i);
@@ -19,23 +41,19 @@ getch();
 #endif
 }
 
-#define CELL_SIZE 512
 void yieldRow(){
-  char Cell1[CELL_SIZE];
-  char Cell2[CELL_SIZE];
-  char Cell3[CELL_SIZE];
-  char CellX[8];
-  loadText(Cell1,';');
-  loadText(Cell2,';');
-  loadText(Cell3,';');
-  loadText(CellX,'\n');
-  if (CellX[0]=='*')
-    fprintf(out,"[[row style=\"background-color:rgb(191,244,174);\"]]");
+  int i;
+  for(i=0;i<CELL_COUNT-1;i++) 
+    loadText(Cells[i],SEPARATOR);
+  loadText(Cells[CELL_COUNT-1],'\n');
+  if (Cells[CONTROL_COL][0]=='*')
+    fprintf(out,"[[row style=\"%s\"]]",ROW_STYLE);
   else
     fprintf(out,"[[row]]");
-  fprintf(out,"[[cell style=\"border: 1px solid silver;\"]]%s[[/cell]]",Cell1);
-  fprintf(out,"[[cell style=\"border: 1px solid silver;\"]]%s[[/cell]]",Cell2);
-  fprintf(out,"[[cell style=\"border: 1px solid silver;\"]]%s[[/cell]]",Cell3);
+  for(i=0;i<CELL_COUNT;i++){ 
+    if (i!=CONTROL_COL)
+    fprintf(out,"[[cell style=\"%s\"]]%s[[/cell]]",CELL_STYLE,Cells[i]);
+  }
   fprintf(out,"[[/row]]\n");
 }
 
@@ -53,9 +71,11 @@ int main(int argc, char *argv[]){
     out= fopen(argv[2],"wt");
   }
   if (!out) out = stdout;
+  initCells();
   do{
     yieldRow();
   }while(!feof(in));
+  freeCells();
   fclose(in);
   fclose(out);
 

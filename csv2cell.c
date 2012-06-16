@@ -98,7 +98,7 @@ void loadText(char *Buf,char TheEnd){
 int i=0; 
 do{
   Buf[i++] = fgetc(in);
-}while(Buf[i-1]!=TheEnd && !feof(in));
+}while(i<cf.cell_size && Buf[i-1]!=TheEnd && !feof(in));
 Buf[i-1]='\x0';
 }
 
@@ -128,14 +128,16 @@ int main(int argc, char *argv[]){
   if (!loadConfig()) return 2;
   setConfig();
 
+  in = stdin; out = stdout;
+
   if (argc>1){
     in = fopen(argv[1],"rt");
+    if (!in) return 2;
   }
-  if (!in) in = stdin;
   if (argc>2){
     out= fopen(argv[2],"wt");
+    if (!out) return 2;
   }
-  if (!out) out = stdout;
 
   initCells();
   fprintf(out,"[[table style=\"border-collapse:collapse\"]]\n");

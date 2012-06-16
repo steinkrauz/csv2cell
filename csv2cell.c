@@ -6,7 +6,9 @@
 
 #ifdef _MSC_VER
 #define stat _stat
-#define _CRT_SECURE_NO_WARNINGS
+#ifndef _CRT_SECURE_NO_WARNINGS
+  #define _CRT_SECURE_NO_WARNINGS
+#endif
 #endif
 
 #define CFG(x) cJSON_GetObjectItem(cfg,x)
@@ -14,16 +16,18 @@
 #define CFGs(x) cJSON_GetObjectItem(cfg,x)->valuestring
 #define CFG_FILE "csv2cell.json"
 
-/*
-#define CELL_SIZE 512
-#define CELL_COUNT 4
-#define SEPARATOR ';'
-#define CONTROL_COL 3
-#define ROW_STYLE "background-color:rgb(191,244,174);"
-#define CELL_STYLE "border: 1px solid silver;"
-*/
+#define CFG_COUNT 6
+#define CFG_FIELDS {"cell_size", "cell_count", "control_column", "separator", "cell_style", "row_style"}
 
   struct cJSON *cfg;
+  struct {
+    int cell_size;
+    int column_count;
+    int ctrl_column;
+    char separator;
+    char* row_style;
+    char* cell_style;    
+  } cf;
 
   FILE *in = NULL,*out = NULL;
   char **Cells;
@@ -31,21 +35,27 @@
    * Yeah, no buffer overflow checks, screw me
    */
 void initCells(){
-  int i, columns, csize;
-  columns = CFGi("cell_count");
-  csize = CFGi("cell_size");
-  Cells = (char **)malloc(columns*sizeof(char *));
-  for (i=0;i<columns;i++){
-    Cells[i] = (char *)malloc(csize);
+  int i;
+  Cells = (char **)malloc(cf.column_count*sizeof(char *));
+  for (i=0;i<cf.column_count;i++){
+    Cells[i] = (char *)malloc(cf.cell_size);
   }
 }
 
 void freeCells(){
-  int i, columns;
-  columns = CFGi("cell_count");
-  for(i=0;i<columns;i++)
+  int i;
+  for(i=0;i<cf.column_count;i++)
      free(Cells[i]);
   free(Cells);
+}
+
+void setConfig(){
+  cf.cell_size = CFGi("cell_size");
+  cf.column_count = CFGi("cell_count");
+  cf.ctrl_column = CFGi("control_column")-1;
+  cf.separator = CFGs("separator")[0];
+  cf.row_style = CFGs("row_style");
+  cf.cell_style = CFGs("cell_style");
 }
 
 int getFileSize(char *filename){
@@ -58,9 +68,9 @@ int getFileSize(char *filename){
 }
 
 int checkConfig(){
- int i,par_count = 6, res = 1;
- char *names[] = {"cell_size", "cell_count", "control_column", "separator", "cell_style", "row_style"};
- for (i=0;i<par_count;i++){
+ int i, res = 1;
+ char *names[] = CFG_FIELDS;
+ for (i=0;i<CFG_COUNT;i++){
    if (CFG(names[i])==NULL){
       res = 0;
       printf("Parameter %s missed.\n",names[i]);
@@ -85,7 +95,7 @@ int loadConfig(){
 }
   
 void loadText(char *Buf,char TheEnd){
-int i=0; char ch;
+int i=0; 
 do{
   Buf[i++] = fgetc(in);
 }while(Buf[i-1]!=TheEnd && !feof(in));
@@ -93,24 +103,17 @@ Buf[i-1]='\x0';
 }
 
 void yieldRow(){
-  int i,columns, ctrl_col;
-  char separator;
-  char *row_style, *cell_style;
-  columns = CFGi("cell_count");
-  ctrl_col = CFGi("control_column");
-  separator = CFGs("separator")[0];
-  row_style = CFGs("row_style");
-  cell_style = CFGs("cell_style");
-  for(i=0;i<columns-1;i++) 
-    loadText(Cells[i],separator);
-  loadText(Cells[columns-1],'\n');
-  if (ctrl_col>=0 && Cells[ctrl_col][0]=='*')
-    fprintf(out,"[[row style=\"%s\"]]",row_style);
+  int i;
+  for(i=0;i<cf.column_count-1;i++) 
+    loadText(Cells[i],cf.separator);
+  loadText(Cells[cf.column_count-1],'\n');
+  if (cf.ctrl_column>=0 && Cells[cf.ctrl_column][0]=='*')
+    fprintf(out,"[[row style=\"%s\"]]",cf.row_style);
   else
     fprintf(out,"[[row]]");
-  for(i=0;i<columns;i++){ 
-    if (i!=ctrl_col)
-      fprintf(out,"[[cell style=\"%s\"]]%s[[/cell]]",cell_style,Cells[i]);
+  for(i=0;i<cf.column_count;i++){ 
+    if (i!=cf.ctrl_column)
+      fprintf(out,"[[cell style=\"%s\"]]%s[[/cell]]",cf.cell_style,Cells[i]);
   }
   fprintf(out,"[[/row]]\n");
 }
@@ -123,10 +126,10 @@ int main(int argc, char *argv[]){
   }
   
   if (!loadConfig()) return 2;
+  setConfig();
 
   if (argc>1){
     in = fopen(argv[1],"rt");
-    puts("dd");
   }
   if (!in) in = stdin;
   if (argc>2){

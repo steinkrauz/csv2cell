@@ -138,9 +138,11 @@ int main(int argc, char *argv[]){
   if (!out) out = stdout;
 
   initCells();
+  fprintf(out,"[[table style=\"border-collapse:collapse\"]]\n");
   do{
     yieldRow();
   }while(!feof(in));
+  fprintf(out,"[[/table]]\n");
   freeCells();
   fclose(in);
   fclose(out);

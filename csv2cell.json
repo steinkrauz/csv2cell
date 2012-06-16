@@ -1,6 +1,6 @@
 {
   "cell_size": 512,
-  "cell_count": 4,
+  "column_count": 4,
   "separator": ";",
   "control_column": 4,
   "row_style": "background-color:rgb(191,244,174);",

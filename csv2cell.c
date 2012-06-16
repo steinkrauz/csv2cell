@@ -17,7 +17,7 @@
 #define CFG_FILE "csv2cell.json"
 
 #define CFG_COUNT 6
-#define CFG_FIELDS {"cell_size", "cell_count", "control_column", "separator", "cell_style", "row_style"}
+#define CFG_FIELDS {"cell_size", "column_count", "control_column", "separator", "cell_style", "row_style"}
 
   struct cJSON *cfg;
   struct {
@@ -51,7 +51,7 @@ void freeCells(){
 
 void setConfig(){
   cf.cell_size = CFGi("cell_size");
-  cf.column_count = CFGi("cell_count");
+  cf.column_count = CFGi("column_count");
   cf.ctrl_column = CFGi("control_column")-1;
   cf.separator = CFGs("separator")[0];
   cf.row_style = CFGs("row_style");
